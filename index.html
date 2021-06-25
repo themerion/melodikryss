@@ -65,7 +65,7 @@ xxxxx2xx xxxx
 R 5x6  x78 Dx
 xx ex xxx9   
 xa     Dx x x
-b   x x x xxx
+b   x_x x xxx
 x x xc    xxx
 x x xxx xxxxx
 xd    xxxxxxx
@@ -75,13 +75,13 @@ xd    xxxxxxx
 
     chars = rows.map(row => row.split("").map(c =>
         /x|\-/.test(c) ? null :
-        /R|D| |[0-9|a-f]/.test(c) ? " " :
+        /R|D| |[0-9|a-f]|\_/.test(c) ? " " :
         "-"
     ))
 
     decorations = rows.map(row => row.split("").map(c =>
         /x| /.test(c) ? null :
-        /R|D|\-/.test(c) ? c :
+        /R|D|\-|\_/.test(c) ? c :
         parseInt(c,16)
     ))
     }
@@ -145,11 +145,17 @@ xd    xxxxxxx
                     drawRightArrow(col, row);
                 } else if(decorations[row][col] === "-") {
                     drawBind(col,row);
+                } else if(decorations[row][col] === "_") {
+                    drawBottomSeparator(col, row);
                 } else if(decorations[row][col] !== null) {
                     ctx.fillText(decorations[row][col], col*scale, row*scale + (scale/3)*0.85);
                 }
             }
         }
+    }
+
+    function drawBottomSeparator(col, row) {
+        ctx.fillRect(col*scale, row*scale+scale*0.85, scale, scale*0.15);
     }
 
     function drawCharsAndSquares() {
