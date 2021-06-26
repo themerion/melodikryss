@@ -1,17 +1,62 @@
 <!--
      TODO:
-     * Head, Body, Meta, etc.
      * Städa hemskt interface för selected
      * Kolla upp bibliotek/snicka ihop lösning för linjär algebra
      * Röj upp row/col - col/row, göm bakom interface (tillsammans med boundary checks)
+     * Splitta till flera filer
 -->
 
 <html>
-    <style>
-        body { margin: 0px; }
-    </style>
-<canvas id="c"> <!-- width/height are controlled by Javascript -->
-</canvas>
+    <head>
+        <title>Melodikryss | Lissel.net</title>
+        <meta charset="UTF-8" />
+        <style>
+            body { margin: 0px; }
+            #c {
+                vertical-align: top;
+                display: inline-block;
+            }
+
+            #container {
+                display: flex;
+                flex-wrap: wrap;
+            }
+            #virtual-keyboard {
+                flex-grow: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            #virtual-keyboard .row {
+                display: inline-block;
+            }
+
+            #virtual-keyboard [data-button] {
+                display: inline-block;
+                padding: 5px;
+                font-size: 16px;
+                margin: 5px;
+                border-top: 1px SOLID #ccc;
+                border-left: 1px SOLID #ccc;
+                border-right: 1px SOLID black;
+                border-bottom: 1px SOLID black;
+
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+
+<div id="container">
+    <div>
+        <canvas id="c"> <!-- width/height are controlled by Javascript -->
+        </canvas>
+    </div>
+
+    <div id="virtual-keyboard">
+    </div>
+</div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
@@ -28,13 +73,43 @@ document.addEventListener("DOMContentLoaded", function() {
     let chars = [];
     let decorations = [];
 
+    createVirtualKeyboard();
     registerEventListeners();
     loadGameField();
 
+    function createVirtualKeyboard() {
+        const keyboard = document.getElementById("virtual-keyboard");
+        
+        let buttonRows = generateButtonRows();
+
+        keyboard.innerHTML = 
+            buttonRows.reduce((acc,row) => `${acc}
+                <div class="row">
+                    ${row.reduce((acc,button) => acc + `<span data-button="${button}">${button}</span>`, "")}
+                </div>`, "");
+        keyboard.addEventListener("click", evt => {
+            let button = evt.target.dataset.button;
+            if(button) {
+                if(button === "Del") {
+                    charRemoved();
+                } else {
+                    charTyped(button);
+                }
+            }
+        })
+    }
+
+    /* returns array<string>[2][*] */
+    function generateButtonRows() {
+        let rows = 'QWERTYUIOP\nASDFGHJKL\nZXCVBNM'.split("\n").map(row => row.split(""));
+        rows[2].push("Del");
+        return rows;
+    }
+
     function registerEventListeners() {
         canvas.addEventListener("click",evt => {
-            let col = Math.floor(evt.clientX / scale);
-            let row = Math.floor(evt.clientY / scale);
+            let col = Math.floor((evt.pageX) / scale);
+            let row = Math.floor((evt.pageY) / scale);
             if(col < chars[0].length && row < chars.length)
                 onMouseClick(col, row);
         });
@@ -271,4 +346,5 @@ xd    xxxxxxx
     }
 });
 </script>
+</body>
 </html>
