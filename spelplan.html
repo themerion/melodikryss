@@ -1,0 +1,357 @@
+<!--
+     TODO:
+     * Städa hemskt interface för selected
+     * Kolla upp bibliotek/snicka ihop lösning för linjär algebra
+     * Röj upp row/col - col/row, göm bakom interface (tillsammans med boundary checks)
+     * Splitta till flera filer
+-->
+
+<html>
+    <head>
+        <title>Melodikryss | Lissel.net</title>
+        <meta charset="UTF-8" />
+        <style>
+            body { margin: 0px; }
+            #c {
+                vertical-align: top;
+                display: inline-block;
+            }
+
+            #container {
+                display: flex;
+                flex-wrap: wrap;
+            }
+            #virtual-keyboard {
+                flex-grow: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            #virtual-keyboard .row {
+                display: inline-block;
+            }
+
+            #virtual-keyboard [data-button] {
+                display: inline-block;
+                padding: 5px;
+                min-width: 30px;
+                text-align: center;
+                font-size: 24px;
+
+                margin: 8px;
+
+                border-top: 2px SOLID #e0e0e0;
+                border-left: 2px SOLID #e0e0e0;
+                border-right: 2px SOLID black;
+                border-bottom: 2px SOLID black;
+
+                color: black;
+                background-color: #d5d5d5;
+
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+
+<div id="container">
+    <div>
+        <canvas id="c"> <!-- width/height are controlled by Javascript -->
+        </canvas>
+    </div>
+
+    <div id="virtual-keyboard">
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const cospix = 0.866025404; //cosinus of pi/6
+
+    let canvas = document.getElementById("c");
+    let ctx = c.getContext("2d");
+    let scale = 30;
+
+    // Col, Row, Direction
+    let selected = [-1,-1, true];
+
+    // Game field
+    let chars = [];
+    let decorations = [];
+
+    createVirtualKeyboard();
+    registerEventListeners();
+    loadGameField();
+
+    function createVirtualKeyboard() {
+        const keyboard = document.getElementById("virtual-keyboard");
+        
+        let buttonRows = generateButtonRows();
+
+        keyboard.innerHTML = 
+            buttonRows.reduce((acc,row) => `${acc}
+                <div class="row">
+                    ${row.reduce((acc,button) => acc + `<span data-button="${button}">${button}</span>`, "")}
+                </div>`, "");
+        keyboard.addEventListener("click", evt => {
+            let button = evt.target.dataset.button;
+            if(button) {
+                if(button === "Del") {
+                    charRemoved();
+                } else {
+                    charTyped(button);
+                }
+            }
+        })
+    }
+
+    /* returns array<string>[2][*] */
+    function generateButtonRows() {
+        let rows = 'QWERTYUIOP\nASDFGHJKL\nZXCVBNM'.split("\n").map(row => row.split(""));
+        rows[2].push("Del");
+        return rows;
+    }
+
+    function registerEventListeners() {
+        canvas.addEventListener("click",evt => {
+            let col = Math.floor((evt.pageX) / scale);
+            let row = Math.floor((evt.pageY) / scale);
+            if(col < chars[0].length && row < chars.length)
+                onMouseClick(col, row);
+        });
+        document.addEventListener("keydown", evt => {
+            if(/^[a-z]|[A-Z]$/.test(evt.key)) {
+                charTyped(evt.key);
+            } else if(" " === evt.key || "Delete" === evt.key) {
+                charRemoved();
+            } else if("ArrowDown" === evt.key) {
+                setSelection(selected[0],selected[1]+1);
+            } else if("ArrowUp" === evt.key) {
+                setSelection(selected[0],selected[1]-1);
+            } else if("ArrowRight" === evt.key) {
+                setSelection(selected[0]+1,selected[1]);
+            } else if("ArrowLeft" === evt.key) {
+                setSelection(selected[0]-1,selected[1]);
+            }
+        });
+    }
+
+    function loadGameField() {
+        const modelRaw = 
+`
+xxxxxxxx1xxxx
+xxxxx2xx xxxx
+3-    -  -Dxx
+ xxxx xx x4 x
+R 5x6  x78 Dx
+xx ex xxx9   
+xa     Dx x x
+b   x_x x xxx
+x x xc    xxx
+x x xxx xxxxx
+xd    xxxxxxx
+`;
+
+    const rows = modelRaw.substring(1,modelRaw.length-1).split("\n");
+
+    chars = rows.map(row => row.split("").map(c =>
+        /x|\-/.test(c) ? null :
+        /R|D| |[0-9|a-f]|\_/.test(c) ? " " :
+        "-"
+    ))
+
+    decorations = rows.map(row => row.split("").map(c =>
+        /x| /.test(c) ? null :
+        /R|D|\-|\_/.test(c) ? c :
+        parseInt(c,16)
+    ))
+    }
+
+    function draw() {
+        scaleCanvas();
+
+        clearScreen();
+        drawSelection();
+        drawCharsAndSquares();
+        drawDecorations();
+
+        setTimeout(draw,100);
+    }
+
+    draw();
+
+    function scaleCanvas() {
+        //c.width = window.innerWidth;
+        //c.height = window.innerHeight;
+        
+        let xScale = window.innerWidth / chars[0].length;
+        let yScale = window.innerHeight / chars.length;
+        if(yScale < xScale) {
+            // Scale to fit height
+            scale = yScale;
+        } else {
+            // Scale to fit width
+            scale = xScale;
+        }
+
+        c.width = scale*chars[0].length;
+        c.height = scale*chars.length;
+    }
+
+    function clearScreen() {
+        ctx.fillStyle = "#eeeeee";
+        ctx.fillRect(0,0,chars[0].length * scale, chars.length*scale);
+    }
+
+    function drawSelection() {
+        ctx.fillStyle = "#99ccff";
+        ctx.fillRect(selected[0]*scale, selected[1]*scale, scale, scale);
+
+        ctx.strokeStyle = "#3366ff";
+        if(selected[2]) {
+            canvas_arrow(ctx, selected[0]*scale+scale*0.1, selected[1]*scale+scale*0.1, selected[0]*scale+scale*0.4, selected[1]*scale+scale*0.1, scale*0.2);
+        } else {
+            canvas_arrow(ctx, selected[0]*scale+scale*0.1, selected[1]*scale+scale*0.1, selected[0]*scale+scale*0.1, selected[1]*scale+scale*0.4, scale*0.2);
+        }
+    }
+
+    function drawDecorations() {
+        ctx.strokeStyle = '#AA0000';
+        ctx.font = (scale/3)+'px Arial';
+        for(let row = 0; row < chars.length; row++) {
+            for(let col = 0; col < chars[row].length; col++) {
+                if(decorations[row][col] === "D") {
+                    drawDownArrow(col,row);
+                } else if(decorations[row][col] === "R") {
+                    drawRightArrow(col, row);
+                } else if(decorations[row][col] === "-") {
+                    drawBind(col,row);
+                } else if(decorations[row][col] === "_") {
+                    drawBottomSeparator(col, row);
+                } else if(decorations[row][col] !== null) {
+                    ctx.fillText(decorations[row][col], col*scale, row*scale + (scale/3)*0.85);
+                }
+            }
+        }
+    }
+
+    function drawBottomSeparator(col, row) {
+        ctx.fillRect(col*scale, row*scale+scale*0.85, scale, scale*0.15);
+    }
+
+    function drawCharsAndSquares() {
+        ctx.fillStyle = "#000000";
+        ctx.font = scale + "px Arial";
+        for(let row = 0; row < chars.length; row++) {
+            for(let col = 0; col < chars[row].length; col++) {
+                if(chars[row][col] === null) {
+                    ctx.fillRect(col*scale, row*scale, scale, scale);
+                } else {
+                    ctx.fillText(chars[row][col], col*scale + scale*0.10, row*scale + scale*0.85); 
+                }
+            }
+        }
+    }
+
+    function drawDownArrow(col, row) {
+        canvas_arrow(ctx, col*scale + scale*0.8, row*scale + scale*0.1, col*scale + scale*0.8, row*scale + scale*0.5, scale*0.2);
+    }
+
+    function drawRightArrow(col, row) {
+        canvas_arrow(ctx, col*scale + scale*0.1, row*scale + scale*0.8, col*scale + scale*0.5, row*scale + scale*0.8, scale*0.2);
+    }
+
+    function drawBind(col, row) {
+        canvas_arrow(ctx, col*scale + scale*0.1, row*scale + scale*0.5, col*scale + scale*0.9, row*scale + scale*0.5, scale*0.4);
+    }
+
+    function canvas_arrow(context, fromx, fromy, tox, toy, headlen) {
+        var headlen = scale*0.2; // length of head in pixels
+        var dx = tox - fromx;
+        var dy = toy - fromy;
+        var length = Math.sqrt(dy*dy + dx*dx); //length of arrow
+        var sina = dy/length;
+        var cosa = dx/length; //computing sin and cos of arrow angle
+        var cosp=cosa*cospix-0.5*sina;
+        var cosm=cosa*cospix+0.5*sina;
+        var sinp=cosa*0.5+cospix*sina;
+        var sinm=cospix*sina-cosa*0.5;
+
+        //computing cos and sin of arrow angle plus pi/6, respectively minus pi/6
+        //(p for plus, m for minus at the end of variable's names)
+        context.beginPath();
+        context.moveTo(fromx, fromy);
+        context.lineTo(tox, toy);
+        context.lineTo(tox - headlen * cosm, toy - headlen * sinm); //computing coordinates using the cos and sin computed above
+        context.moveTo(tox, toy);
+        context.lineTo(tox - headlen * cosp, toy - headlen * sinp);
+        context.stroke();
+        context.closePath();
+    }
+
+    function onMouseClick(col, row) {
+        // If user clicks on the square that is already selected,
+        // change typing direction (horizontal/vertical).
+        if(selected[0] === col && selected[1] === row) {
+            selected[2] = !selected[2];
+        }
+
+        setSelection(col, row);
+    }
+
+    function setSelection(col, row) {
+        if(col < 0 || row < 0 || row >= chars.length || col >= chars[0].length)
+            return;
+
+        if(chars[row][col] !== null) {
+            selected = [col,row, selected[2]];
+
+            // If you cannot follow the previous selection direction, switch if the other direction is available.
+            if(getNextSelection(selected[2])[0] === -1 && getNextSelection(!selected[2])[0] !== -1) {
+                selected[2] = !selected[2];
+            }
+        } else
+            return;
+    }
+
+    function charTyped(key) {
+        if(selected[0] !== -1) {
+            chars[selected[1]][selected[0]] = key.toUpperCase();
+
+            moveSelection();
+        }
+    }
+
+    function charRemoved() {
+        if(selected[0] !== -1) {
+            chars[selected[1]][selected[0]] = " ";
+        }
+    }
+
+    function getNextSelection(dir) {
+        let newCol = selected[0] + (dir?1:0);
+        let newRow = selected[1] + (dir?0:1);
+
+        if(newCol < 0 || newRow < 0 || newRow >= chars.length || newCol >= chars[0].length)
+            return [-1,-1,true];
+
+        if(chars[newRow][newCol] !== null) {
+            return [newCol, newRow];
+        } else if(/\-|\|/.test(decorations[newRow][newCol])) {
+            return [newCol + (dir?1:0), newRow + (dir?0:1)];
+        } else {
+            return [-1,-1,true];
+        }
+    }
+
+    function moveSelection() {
+        [newCol, newRow] = getNextSelection(selected[2]);
+        
+        if(newCol !== -1)
+            setSelection(newCol, newRow);
+    }
+});
+</script>
+</body>
+</html>
