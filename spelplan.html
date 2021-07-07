@@ -66,6 +66,8 @@
 </div>
 
 <script>
+let getChars = () => null; // For test
+
 document.addEventListener("DOMContentLoaded", function() {
     const cospix = 0.866025404; //cosinus of pi/6
 
@@ -99,6 +101,11 @@ document.addEventListener("DOMContentLoaded", function() {
             if(button) {
                 if(button === "Del") {
                     charRemoved();
+                } else if(button === "Skicka In") {
+                    var name = prompt("Vem är du?");
+                    if(name) {
+                        sendSolution(name);
+                    }
                 } else {
                     charTyped(button);
                 }
@@ -110,6 +117,7 @@ document.addEventListener("DOMContentLoaded", function() {
     function generateButtonRows() {
         let rows = 'QWERTYUIOP\nASDFGHJKL\nZXCVBNM'.split("\n").map(row => row.split(""));
         rows[2].push("Del");
+        rows[2].push("Skicka In");
         return rows;
     }
 
@@ -351,6 +359,34 @@ xd    xxxxxxx
         if(newCol !== -1)
             setSelection(newCol, newRow);
     }
+
+    async function sendSolution(name) {
+        const nameUrl = encodeURIComponent(name);
+
+        const charUrl = encodeURIComponent(
+            chars
+            .map(row => row.map(c => c === null ? "-" : c)) // Replace null with dash
+            .map(row => row.join(""))
+            .join("\n")
+        );
+
+        const url = `https://kryss.azurewebsites.net/api/SolutionSentHTTP?name=${nameUrl}&solution=${charUrl}`;
+
+        try {
+        const res = await fetch(url);
+        if(res.ok) {
+            alert("Lösningen inskickad");
+        } else {
+            const msg = await res.body();
+            alert("Det gick inte att skicka lösningen: " + msg);
+        }
+        } catch(e) {
+            alert("Det gick inte att skicka lösningen:" + e);
+        }
+    }
+
+    // For test
+    getChars = () => chars;
 });
 </script>
 </body>
