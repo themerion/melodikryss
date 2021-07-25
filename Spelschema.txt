@@ -1,21 +1,39 @@
 # Spelschema
 
 Vinkelordet lodrätt 3, och vågrätt 13 - nanne
+- Vad känner hon
+- Vad heter hon
 
 Lodrätt 8 - hanna
+- Artistens förnamn
 
 Vågrätt 12 - zelda
 
 Lodrätt 5 - dolce
 
-Lodrätt 1, lodrätt 10 - haydn
+Lodrätt 2, lodrätt 10 - haydn
+- Vilket instrument
+- Vad heter kompositören
 
 Vinkelordet vågrätt 10 - hammerfall
 
-Lodrätt 4 - två bokstäver - golf
+Vågrätt 4 - två bokstäver - golf
 
 Vinkelordet vågrätt 3, vågrätt 11 - shallow
+ - Filmen
+ - Del ur kvinnliga huvudrollsinnehaverskans artistnamn
 
 Vågrätt 9 - anna
 
 Lodrätt 15 - bono
+
+Lodrätt 14 - amazon
+- Vilken bilmodell?
+
+Vågrätt 7 - chrono
+- Första delen ur speltiteln.
+
+Lodrätt 1 - phantom
+- Första delen ur låtens titel.
+
+Vågrätt 6 - omd
